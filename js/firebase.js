@@ -82,27 +82,62 @@ const FirebaseSync = {
       const data     = doc.data();
       const incoming = JSON.stringify(data);
 
-      // Only update if data actually changed and didn't come from us
+      // Ignore if this is our own save coming back
       if (incoming === this.lastSaved) return;
       this.lastSaved = incoming;
 
-      // Merge into localStorage
+      // Silently merge into localStorage
+      const oldChecklist = JSON.stringify(Storage.getChecklist());
       Storage.importAll(data);
+      const newChecklist = JSON.stringify(Storage.getChecklist());
 
-      // Refresh the current page view
-      if (typeof Navigation !== 'undefined') {
-        Navigation.navigate(Navigation.currentPage, false);
-        Navigation.updateNavBadges();
-      }
+      // Only update UI if checklist actually changed
+      if (oldChecklist === newChecklist) return;
 
-      // Update sticky widget
-      if (typeof App !== 'undefined') {
-        App.updateAllProgress();
-      }
+      // Update checkboxes in-place without re-rendering the page
+      this._patchCheckboxes(data.checklist || {}, data.timestamps || {});
 
-      Toast.show('Synced from another device', 'info');
+      // Update progress bars and nav badges silently
+      if (typeof App !== 'undefined') App.updateAllProgress();
+      if (typeof Navigation !== 'undefined') Navigation.updateNavBadges();
+
+      Toast.show('Updated from another device', 'info', 2000);
     }, err => {
       console.error('Firebase listener error:', err);
+    });
+  },
+
+  // Patch only the changed checkboxes in the DOM without full re-render
+  _patchCheckboxes(checklist, timestamps) {
+    CATEGORY_ORDER.forEach(catId => {
+      CHECKLIST_DATA[catId].items.forEach(item => {
+        const cb     = document.getElementById(`cb-${item.id}`);
+        const itemEl = document.getElementById(`item-${item.id}`);
+        if (!cb || !itemEl) return;
+
+        const shouldBeChecked = !!checklist[item.id];
+        if (cb.checked === shouldBeChecked) return;
+
+        cb.checked = shouldBeChecked;
+        itemEl.classList.toggle('checked', shouldBeChecked);
+
+        const tsEl = itemEl.querySelector('.item-timestamp');
+        if (shouldBeChecked && timestamps[item.id]) {
+          if (tsEl) {
+            tsEl.innerHTML = `${ICONS.clock} Packed ${App.formatTime(timestamps[item.id])}`;
+          } else {
+            const body = itemEl.querySelector('.item-body');
+            if (body) {
+              const span = document.createElement('span');
+              span.className = 'item-timestamp';
+              span.innerHTML = `${ICONS.clock} Packed ${App.formatTime(timestamps[item.id])}`;
+              body.appendChild(span);
+            }
+          }
+        } else {
+          if (tsEl) tsEl.remove();
+        }
+      });
     });
   },
 
