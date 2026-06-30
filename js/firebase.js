@@ -47,11 +47,15 @@ const FirebaseSync = {
     }
   },
 
-  // Load from Firestore on startup and merge into localStorage
+  // Load from Firestore on startup and merge into localStorage (3s timeout fallback)
   async loadAndMerge() {
     this._showSyncStatus('syncing');
     try {
-      const doc = await this.docRef.get();
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 4000)
+      );
+      const fetch = this.docRef.get();
+      const doc = await Promise.race([fetch, timeout]);
       if (doc.exists) {
         const data = doc.data();
         Storage.importAll(data);
@@ -62,7 +66,7 @@ const FirebaseSync = {
       this._showSyncStatus('synced');
       return false;
     } catch (e) {
-      console.error('Firebase load error:', e);
+      console.warn('Firebase load failed, using localStorage:', e.message);
       this._showSyncStatus('offline');
       return false;
     }
