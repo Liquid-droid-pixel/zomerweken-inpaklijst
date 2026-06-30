@@ -459,11 +459,14 @@ const App = {
   currentFilter: 'all',
   currentSearch: '',
 
-  init() {
+  async init() {
     // Apply saved theme
     const theme = Storage.getTheme();
     document.documentElement.setAttribute('data-theme', theme);
     document.getElementById('theme-toggle').innerHTML = theme === 'dark' ? ICONS.sun : ICONS.moon;
+
+    // Load from Firebase first, then render
+    await FirebaseSync.loadAndMerge();
 
     // Build navigation
     Navigation.buildSidebar();
@@ -471,6 +474,9 @@ const App = {
 
     // Render default page
     Navigation.navigate('home', false);
+
+    // Start listening for real-time updates from other devices
+    FirebaseSync.startListening();
 
     // Modal events
     document.getElementById('modal-save').addEventListener('click', () => Notes.save());

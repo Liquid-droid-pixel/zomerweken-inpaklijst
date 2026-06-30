@@ -24,19 +24,25 @@ const Storage = {
   },
 
   getChecklist()       { return this._get(this.KEYS.CHECKLIST)  || {}; },
-  setChecklist(d)      { return this._set(this.KEYS.CHECKLIST, d); },
+  setChecklist(d)      { this._set(this.KEYS.CHECKLIST, d);  this._syncToFirebase(); },
 
   getNotes()           { return this._get(this.KEYS.NOTES)       || {}; },
-  setNotes(d)          { return this._set(this.KEYS.NOTES, d); },
+  setNotes(d)          { this._set(this.KEYS.NOTES, d);       this._syncToFirebase(); },
 
   getTheme()           { return this._get(this.KEYS.THEME)       || 'dark'; },
   setTheme(t)          { return this._set(this.KEYS.THEME, t); },
 
   getTimestamps()      { return this._get(this.KEYS.TIMESTAMPS)  || {}; },
-  setTimestamps(d)     { return this._set(this.KEYS.TIMESTAMPS, d); },
+  setTimestamps(d)     { this._set(this.KEYS.TIMESTAMPS, d);  this._syncToFirebase(); },
 
   getFavorites()       { return this._get(this.KEYS.FAVORITES)   || {}; },
-  setFavorites(d)      { return this._set(this.KEYS.FAVORITES, d); },
+  setFavorites(d)      { this._set(this.KEYS.FAVORITES, d);   this._syncToFirebase(); },
+
+  _syncToFirebase() {
+    if (typeof FirebaseSync !== 'undefined') {
+      FirebaseSync.scheduleSave();
+    }
+  },
 
   getCollapsed()       { return this._get(this.KEYS.COLLAPSED)   || {}; },
   setCollapsed(d)      { return this._set(this.KEYS.COLLAPSED, d); },
